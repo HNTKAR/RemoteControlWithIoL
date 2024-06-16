@@ -1,36 +1,33 @@
 package com.example.pcremotecontrol
 
+
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
+import androidx.activity.*
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.pcremotecontrol.ui.theme.PCRemoteControlTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.net.DatagramPacket
-import java.net.DatagramSocket
-import java.net.InetAddress
+import kotlinx.coroutines.*
+import kotlinx.coroutines.selects.select
+import java.net.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val scope = CoroutineScope(Job() + Dispatchers.Main)
+        val cddm = MacAddressSelector()
+        val macArray = arrayOf("80:e8:2c:30:d8:c0")
+
         setContent {
             PCRemoteControlTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -42,14 +39,181 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(text = "WoL Button")
+                        cddm.ComputerSelectDropdown()
                         Button(onClick = {
-                            scope.launch { PacketSender().sendMagicPacket("80:e8:2c:30:d8:c0") }
+                            scope.launch { PacketSender().sendMagicPacket(cddm.selectedMac) }
                         }) {
-                            Text(text = "OK")
+                            Text(text = "HP Note PC")
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+class MacAddressSelector() {
+    private val MacAddressList = mapOf(
+        "80:e8:2c:30:d8:c0" to "Note PC",
+        "74:56:3c:33:bc:e3" to "Desktop PC"
+    )
+    var selectedMac = ""
+
+    @Preview
+    @Composable
+    fun ComputerSelectDropdown() {
+        var expanded by remember { mutableStateOf(false) }
+        var fieldText by remember {
+            mutableStateOf("Not Selected")
+        }
+
+        Row {
+            TextField(
+                value = fieldText,
+                onValueChange = { },
+                readOnly = true,
+                label = {
+                    Text(
+                        text = "PC Name"
+                    )
+                })
+            IconButton(onClick = { expanded = true }) {
+                Icon(Icons.Default.ArrowDropDown, contentDescription = "PC")
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    MacAddressList.forEach { (pcMacAddress, pcName) ->
+                        DropdownMenuItem(
+                            text = { Text(pcName) },
+                            onClick = {
+                                fieldText = "$pcName($pcMacAddress)"
+                                expanded = false
+                                selectedMac = pcMacAddress
+                            })
+                    }
+
+                    Divider()
+                    DropdownMenuItem(
+                        text = { Text("Clear") },
+                        onClick = {
+                            fieldText = ""
+                            expanded = false
+                            selectedMac = ""
+                        })
+                }
+            }
+        }
+
+
+//        Text("AAA",modifier=Modifier DropdownMenu(expanded = , onDismissRequest = { /*TODO*/ }) {
+//
+//        })
+
+//        Box(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .wrapContentSize(Alignment.Center),
+//        ) {
+//            Text(
+//                items[selectedIndex],
+//                modifier = Modifier
+//                    .fillMaxWidth(0.5f)
+//                    .clickable(onClick = { expanded = true })
+//                    .background(
+//                        Color.Gray
+//                    ),
+//
+//                )
+//            DropdownMenu(
+//                expanded = expanded,
+//                onDismissRequest = { expanded = false },
+//                modifier = Modifier
+//                    .fillMaxWidth(0.5f)
+//            ) {
+//                items.forEachIndexed { index, s ->
+//                    DropdownMenuItem(onClick = {
+//                        selectedIndex = index
+//                        expanded = false
+//                    }, text = {
+//                        Text(text = s)
+//                    })
+//                }
+//            }
+//        }
+    }
+}
+
+@Composable
+fun DropdownDemo() {
+    var expanded by remember { mutableStateOf(false) }
+    val items = listOf("A", "B", "C", "D", "E", "F")
+    val disabledValue = "B"
+    var selectedIndex by remember { mutableStateOf(0) }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentSize(Alignment.Center)
+    ) {
+        Text(
+            items[selectedIndex],
+            modifier = Modifier
+                .fillMaxWidth(0.5f)
+                .clickable(onClick = { expanded = true })
+                .background(
+                    Color.Gray
+                ),
+
+            )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .fillMaxWidth(0.5f)
+        ) {
+            items.forEachIndexed { index, s ->
+                DropdownMenuItem(onClick = {
+                    selectedIndex = index
+                    expanded = false
+                }, text = {
+                    Text(text = s)
+                })
+            }
+            Divider()
+            DropdownMenuItem(onClick = {
+                expanded = false
+            }, text = {
+                Text(text = "")
+            })
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TestList() {
+    var expanded by remember { mutableStateOf(false) }
+    Box(
+        modifier = Modifier
+//            .fillMaxSize()
+            .wrapContentSize(Alignment.TopStart)
+    ) {
+        IconButton(onClick = { expanded = true }) {
+            Icon(Icons.Default.MoreVert, contentDescription = "Localized description")
+        }
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = {}
+//            onDismissRequest = { expanded = false },
+
+        ) {
+//            DropdownMenuItem(onClick = { /* Handle refresh! */ }) {
+//                Text("Refresh")
+//            }
+            DropdownMenuItem(
+                onClick = { /* Handle settings! */ },
+                text = { Text("Home PC") }
+            )
+            DropdownMenuItem(
+                onClick = { /* Handle send feedback! */ },
+                text = { Text(text = "HP Note PC") })
         }
     }
 }
